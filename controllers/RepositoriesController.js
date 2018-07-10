@@ -1,6 +1,6 @@
 const GithubGraphQLApi = require('node-github-graphql');
 const github = new GithubGraphQLApi({
-  token: "223c82b526c1db14e7ad3196291f6512bd9908ff",
+  token: process.env.GITHUB_ACCESS_TOKEN,
 });
 
 const query = `
