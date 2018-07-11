@@ -31,18 +31,19 @@ query($start: Int, $after: String, $login: String = ""){
 }
 `;
 
+const githubHost = "https://api.github.com/repos";
+const githubClientId = process.env.GITHUB_CLIENT_ID;
+const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
+
 const Index = async (_, res) => {
   await fetch(res);
 };
 
-async function fetch(fn, array = [], start = 10, after = null, login = "thoughtworks"){
+async function fetch(fn, array = [], start = 100, after = null, login = "thoughtworks"){
   github.query(query, { start: start, after: after, login: login }, async (req, res) => {
     const repositories = req.data.organization.repositories;
     for(let element of repositories.edges) {
-      const host = "https://api.github.com/repos";
-      const clientId = process.env.GITHUB_CLIENT_ID;
-      const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-      const url = `${ host }${ element.node.resourcePath }/contributors?client_id=${ clientId }&client_secret=${ clientSecret }`;
+      const url = `${ githubHost }${ element.node.resourcePath }/contributors?client_id=${ githubClientId }&client_secret=${ githubClientSecret }`;
       const collaborators = await fetchCollaborators(url);
       element.collaborators = collaborators;
     }
@@ -57,30 +58,45 @@ async function fetch(fn, array = [], start = 10, after = null, login = "thoughtw
   });
 };
 
-function collaborators(element) {
-  const host = "https://api.github.com/repos";
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-  const url = `${ host }${ element.node.resourcePath }/contributors?client_id=${ clientId }&client_secret=${ clientSecret }`;
-  collaborators = fetchCollaborators(url);
-  element.collaborators = collaborators;
-  return element;
-}
-
 async function fetchCollaborators(url, collaborators = []) {
   try {
     const response = await axios.get(url);
     collaborators = collaborators.concat(response.data);
-    const link = response.headers.link;
-    // TODO alterar esse método horrível
-    if(link && link.split(",")[0].match("next")) {
-      const nextPageUrl = link.split(",")[0].split(";")[0].replace(/>/g, '').replace(/</g, '');
+    const link = parseLinkHeader(response.headers.link)
+    let nextPageUrl = undefined;
+
+    if(link && (nextPageUrl = link.next)) {
       return fetchCollaborators(nextPageUrl, collaborators);
     }
+
     return collaborators;
   } catch (error) {
     console.error(error);
   }
+}
+
+function parseLinkHeader(header) {
+  if (!header || header.length === 0) {
+    return null;
+  }
+
+  // Split parts by comma
+  var parts = header.split(',');
+
+  let links = {};
+
+  // Parse each part into a named link
+  for(let i = 0; i < parts.length; i++) {
+    const section = parts[i].split(';');
+    if (section.length !== 2) {
+      return null;
+    }
+    const url = section[0].replace(/<(.*)>/, '$1').trim();
+    const name = section[1].replace(/rel="(.*)"/, '$1').trim();
+    links[name] = url;
+  }
+
+  return links;
 }
 
 module.exports = { Index };
