@@ -1,6 +1,6 @@
 const githubGraphQLCollaboratorApi = require("../lib/github/graphql/repository/api");
 const Index = async (_, res) => {
-  const repositories = await githubGraphQLCollaboratorApi.Fetch();
+  const repositories = await githubGraphQLCollaboratorApi.fetch();
   res.json({ repositories });
 };
 
