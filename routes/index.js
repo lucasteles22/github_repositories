@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const RepositoriesController = require("../controllers/RepositoriesController");
+const RepositoriesController = require("../controllers/repositories_controller");
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
